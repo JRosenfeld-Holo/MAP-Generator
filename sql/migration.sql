@@ -1,5 +1,6 @@
 -- ============================================================
 -- Hologram MAP Auth: profiles table + RLS + auto-profile trigger
+-- Safe to run multiple times (idempotent)
 -- Run this in Supabase Dashboard > SQL Editor
 -- ============================================================
 
@@ -17,14 +18,14 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 -- 2. Enable Row Level Security
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
--- 3. RLS Policies
+-- 3. RLS Policies (drop before recreating so this script is idempotent)
 
--- Users can read their own profile
+DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
 CREATE POLICY "Users can view own profile"
   ON public.profiles FOR SELECT
   USING (auth.uid() = id);
 
--- Superadmin/admin can read all profiles
+DROP POLICY IF EXISTS "Admins can view all profiles" ON public.profiles;
 CREATE POLICY "Admins can view all profiles"
   ON public.profiles FOR SELECT
   USING (
@@ -34,13 +35,13 @@ CREATE POLICY "Admins can view all profiles"
     )
   );
 
--- Users can update their own profile (e.g., must_change_password)
+DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
 CREATE POLICY "Users can update own profile"
   ON public.profiles FOR UPDATE
   USING (auth.uid() = id)
   WITH CHECK (auth.uid() = id);
 
--- Superadmin/admin can insert profiles (for invites)
+DROP POLICY IF EXISTS "Admins can insert profiles" ON public.profiles;
 CREATE POLICY "Admins can insert profiles"
   ON public.profiles FOR INSERT
   WITH CHECK (
@@ -50,7 +51,7 @@ CREATE POLICY "Admins can insert profiles"
     )
   );
 
--- Superadmin/admin can delete profiles
+DROP POLICY IF EXISTS "Admins can delete profiles" ON public.profiles;
 CREATE POLICY "Admins can delete profiles"
   ON public.profiles FOR DELETE
   USING (
@@ -76,10 +77,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Drop existing trigger if any
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-
--- Create trigger
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
@@ -94,7 +92,6 @@ END;
 $$ LANGUAGE plpgsql;
 
 DROP TRIGGER IF EXISTS profiles_updated_at ON public.profiles;
-
 CREATE TRIGGER profiles_updated_at
   BEFORE UPDATE ON public.profiles
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
