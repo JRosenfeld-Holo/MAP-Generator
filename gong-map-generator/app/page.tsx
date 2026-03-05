@@ -22,8 +22,13 @@ import {
   ArrowRight,
   Circle,
   CircleCheck,
+  UserPlus,
+  LogOut,
 } from 'lucide-react';
 import type { GongAccount, MAPContent, MAPMilestone, MAPRiskFactor } from '@/lib/types';
+import { useAuth } from '@/contexts/AuthContext';
+import InviteModal from '@/components/InviteModal';
+import ManageUsersModal from '@/components/ManageUsersModal';
 
 type Step = 'select' | 'generating' | 'editing' | 'publishing' | 'done';
 
@@ -35,6 +40,7 @@ const STEPS: { key: Step; label: string }[] = [
 ];
 
 export default function AdminDashboard() {
+  const { isAdmin, signOut } = useAuth();
   const [aeEmail, setAeEmail] = useState('');
   const [aeName, setAeName] = useState('');
   const [accounts, setAccounts] = useState<GongAccount[]>([]);
@@ -49,6 +55,8 @@ export default function AdminDashboard() {
   const [loadingAccounts, setLoadingAccounts] = useState(false);
   const [copied, setCopied] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [isInviteOpen, setIsInviteOpen] = useState(false);
+  const [isManageOpen, setIsManageOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -310,14 +318,34 @@ export default function AdminDashboard() {
             <span className="text-brand-muted text-sm ml-1">/</span>
             <span className="text-brand-muted text-sm">MAP Generator</span>
           </div>
-          <a
-            href="https://www.hologram.io/contact-sales/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs bg-brand-lime text-brand-bg font-semibold px-4 py-1.5 rounded-lg hover:bg-brand-lime-dim cursor-pointer transition-colors"
-          >
-            Contact Sales
-          </a>
+          <div className="flex items-center gap-2">
+            {isAdmin && (
+              <>
+                <button
+                  onClick={() => setIsInviteOpen(true)}
+                  className="flex items-center gap-1.5 text-xs bg-brand-lime/10 hover:bg-brand-lime/20 text-brand-lime border border-brand-lime/20 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Invite</span>
+                </button>
+                <button
+                  onClick={() => setIsManageOpen(true)}
+                  className="flex items-center gap-1.5 text-xs text-brand-muted border border-brand-border px-3 py-1.5 rounded-lg hover:bg-brand-card transition-colors cursor-pointer"
+                >
+                  <Users className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Users</span>
+                </button>
+              </>
+            )}
+            <button
+              onClick={() => signOut()}
+              className="flex items-center gap-1.5 text-xs text-brand-muted hover:text-brand-white px-3 py-1.5 rounded-lg hover:bg-brand-card transition-colors cursor-pointer"
+              title="Sign out"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Sign Out</span>
+            </button>
+          </div>
         </div>
       </nav>
 
@@ -342,20 +370,18 @@ export default function AdminDashboard() {
             {STEPS.map((s, i) => (
               <div key={s.key} className="flex items-center gap-1">
                 {i > 0 && <div className={`w-8 h-px ${i <= currentStepIndex ? 'bg-brand-lime' : 'bg-brand-border'}`} />}
-                <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-colors ${
-                  i === currentStepIndex
-                    ? 'bg-brand-lime/15 text-brand-lime font-semibold'
-                    : i < currentStepIndex
-                      ? 'text-brand-lime/60'
-                      : 'text-brand-slate'
-                }`}>
-                  <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                    i < currentStepIndex
-                      ? 'bg-brand-lime/20 text-brand-lime'
-                      : i === currentStepIndex
-                        ? 'bg-brand-lime text-brand-bg'
-                        : 'bg-brand-border text-brand-slate'
+                <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-colors ${i === currentStepIndex
+                  ? 'bg-brand-lime/15 text-brand-lime font-semibold'
+                  : i < currentStepIndex
+                    ? 'text-brand-lime/60'
+                    : 'text-brand-slate'
                   }`}>
+                  <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${i < currentStepIndex
+                    ? 'bg-brand-lime/20 text-brand-lime'
+                    : i === currentStepIndex
+                      ? 'bg-brand-lime text-brand-bg'
+                      : 'bg-brand-border text-brand-slate'
+                    }`}>
                     {i < currentStepIndex ? '✓' : i + 1}
                   </span>
                   <span className="hidden sm:inline">{s.label}</span>
@@ -495,9 +521,8 @@ export default function AdminDashboard() {
                               setIsDropdownOpen(false);
                             }}
                             onMouseEnter={() => setHighlightedIndex(idx)}
-                            className={`w-full px-4 py-3 text-left cursor-pointer transition-colors flex items-center justify-between border-b border-brand-border last:border-b-0 ${
-                              highlightedIndex === idx ? 'bg-brand-card-hover' : 'hover:bg-brand-card-hover'
-                            }`}
+                            className={`w-full px-4 py-3 text-left cursor-pointer transition-colors flex items-center justify-between border-b border-brand-border last:border-b-0 ${highlightedIndex === idx ? 'bg-brand-card-hover' : 'hover:bg-brand-card-hover'
+                              }`}
                           >
                             <div className="min-w-0">
                               <p className="text-sm text-brand-white font-medium truncate">{account.name}</p>
@@ -624,11 +649,10 @@ export default function AdminDashboard() {
                     return (
                       <div
                         key={i}
-                        className={`border rounded-lg p-4 transition-all ${
-                          isComplete
-                            ? 'bg-brand-lime/5 border-brand-lime/20'
-                            : 'bg-brand-bg/50 border-brand-border'
-                        }`}
+                        className={`border rounded-lg p-4 transition-all ${isComplete
+                          ? 'bg-brand-lime/5 border-brand-lime/20'
+                          : 'bg-brand-bg/50 border-brand-border'
+                          }`}
                       >
                         <div className="flex items-start gap-3">
                           {/* Checkbox - min 44px touch target */}
@@ -650,9 +674,8 @@ export default function AdminDashboard() {
                                 value={milestone.title}
                                 onChange={(e) => updateMilestone(i, 'title', e.target.value)}
                                 placeholder="Milestone title"
-                                className={`flex-1 bg-transparent font-medium text-sm focus:outline-none transition-all ${
-                                  isComplete ? 'text-brand-muted line-through' : 'text-brand-white'
-                                }`}
+                                className={`flex-1 bg-transparent font-medium text-sm focus:outline-none transition-all ${isComplete ? 'text-brand-muted line-through' : 'text-brand-white'
+                                  }`}
                               />
                               <button
                                 onClick={() => removeMilestone(i)}
@@ -667,9 +690,8 @@ export default function AdminDashboard() {
                               onChange={(e) => updateMilestone(i, 'description', e.target.value)}
                               placeholder="Description..."
                               rows={1}
-                              className={`w-full bg-transparent text-sm focus:outline-none resize-none transition-all ${
-                                isComplete ? 'text-brand-slate' : 'text-brand-muted'
-                              }`}
+                              className={`w-full bg-transparent text-sm focus:outline-none resize-none transition-all ${isComplete ? 'text-brand-slate' : 'text-brand-muted'
+                                }`}
                             />
                             <div className="flex flex-wrap gap-2">
                               <select
@@ -903,6 +925,10 @@ export default function AdminDashboard() {
           </div>
         </footer>
       </div>
+
+      {/* Auth Modals */}
+      <InviteModal isOpen={isInviteOpen} onClose={() => setIsInviteOpen(false)} />
+      <ManageUsersModal isOpen={isManageOpen} onClose={() => setIsManageOpen(false)} />
     </div>
   );
 }
