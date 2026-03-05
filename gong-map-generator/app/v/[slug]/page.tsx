@@ -145,9 +145,16 @@ export default async function PublicMAPView({ params }: Props) {
               <span className="text-[clamp(1.5rem,4vw,2.5rem)] text-brand-lime/50 font-extralight">+</span>
               <span className="h-px flex-1 max-w-28 bg-gradient-to-l from-transparent to-brand-border" />
             </div>
-            <h2 className="text-[clamp(2.5rem,8vw,5.5rem)] font-extrabold tracking-tight leading-[1.0] text-white/25">
-              Hologram
-            </h2>
+            <div className="flex items-center justify-center opacity-40" style={{ height: 'clamp(2.5rem, 8vw, 5.5rem)' }}>
+              <Image
+                src="/logo-wordmark.png"
+                alt="Hologram"
+                width={660}
+                height={108}
+                style={{ height: 'clamp(2.5rem, 8vw, 5.5rem)', width: 'auto' }}
+                className="object-contain"
+              />
+            </div>
           </div>
 
           {/* Metadata chips */}
