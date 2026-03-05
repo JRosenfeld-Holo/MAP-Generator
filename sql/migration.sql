@@ -18,7 +18,17 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 -- 2. Enable Row Level Security
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
--- 3. RLS Policies (drop before recreating so this script is idempotent)
+-- 3. Helper function to check admin role (SECURITY DEFINER bypasses RLS,
+--    preventing infinite recursion in policies that query profiles)
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid() AND role IN ('superadmin', 'admin')
+  );
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+
+-- 4. RLS Policies (drop before recreating so this script is idempotent)
 
 DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
 CREATE POLICY "Users can view own profile"
@@ -28,12 +38,7 @@ CREATE POLICY "Users can view own profile"
 DROP POLICY IF EXISTS "Admins can view all profiles" ON public.profiles;
 CREATE POLICY "Admins can view all profiles"
   ON public.profiles FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles
-      WHERE id = auth.uid() AND role IN ('superadmin', 'admin')
-    )
-  );
+  USING (public.is_admin());
 
 DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
 CREATE POLICY "Users can update own profile"
@@ -44,24 +49,14 @@ CREATE POLICY "Users can update own profile"
 DROP POLICY IF EXISTS "Admins can insert profiles" ON public.profiles;
 CREATE POLICY "Admins can insert profiles"
   ON public.profiles FOR INSERT
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.profiles
-      WHERE id = auth.uid() AND role IN ('superadmin', 'admin')
-    )
-  );
+  WITH CHECK (public.is_admin());
 
 DROP POLICY IF EXISTS "Admins can delete profiles" ON public.profiles;
 CREATE POLICY "Admins can delete profiles"
   ON public.profiles FOR DELETE
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles
-      WHERE id = auth.uid() AND role IN ('superadmin', 'admin')
-    )
-  );
+  USING (public.is_admin());
 
--- 4. Auto-create profile trigger (when user signs up via invite)
+-- 5. Auto-create profile trigger (when user signs up via invite)
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -82,7 +77,7 @@ CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
--- 5. Updated_at auto-update trigger
+-- 6. Updated_at auto-update trigger
 CREATE OR REPLACE FUNCTION public.update_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
