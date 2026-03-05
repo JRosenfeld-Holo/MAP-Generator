@@ -308,6 +308,29 @@ export default function AdminDashboard() {
     });
   }
 
+  function updateStakeholder(index: number, field: 'name' | 'role' | 'company', value: string) {
+    if (!mapContent) return;
+    const stakeholders = [...mapContent.stakeholders];
+    stakeholders[index] = { ...stakeholders[index], [field]: value };
+    setMapContent({ ...mapContent, stakeholders });
+  }
+
+  function addStakeholder() {
+    if (!mapContent) return;
+    setMapContent({
+      ...mapContent,
+      stakeholders: [...mapContent.stakeholders, { name: '', role: '', company: '' }],
+    });
+  }
+
+  function removeStakeholder(index: number) {
+    if (!mapContent) return;
+    setMapContent({
+      ...mapContent,
+      stakeholders: mapContent.stakeholders.filter((_, i) => i !== index),
+    });
+  }
+
   return (
     <div className="min-h-screen">
       {/* Navigation Bar */}
@@ -818,19 +841,58 @@ export default function AdminDashboard() {
 
               {/* Stakeholders */}
               <section className="bg-brand-card border border-brand-border rounded-xl p-6">
-                <h3 className="text-[11px] font-bold text-brand-muted uppercase tracking-wider mb-4 flex items-center gap-2">
-                  <Users className="w-3.5 h-3.5" />
-                  Key Stakeholders
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {mapContent.stakeholders.map((s, i) => (
-                    <span
-                      key={i}
-                      className="bg-brand-bg border border-brand-border text-[11px] px-3 py-1.5 rounded text-brand-white"
-                    >
-                      {s.name} <span className="text-brand-muted">({s.role})</span>
-                    </span>
-                  ))}
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-[11px] font-bold text-brand-muted uppercase tracking-wider flex items-center gap-2">
+                    <Users className="w-3.5 h-3.5" />
+                    Key Stakeholders
+                  </h3>
+                  <button
+                    onClick={addStakeholder}
+                    className="text-[10px] text-brand-lime border border-brand-lime/20 px-2 py-1 rounded cursor-pointer hover:bg-brand-lime/10 transition-colors flex items-center gap-1"
+                  >
+                    <Plus className="w-2.5 h-2.5" /> Add
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {mapContent.stakeholders.length === 0 ? (
+                    <p className="text-xs text-brand-slate text-center py-4">
+                      No stakeholders yet. Click Add to create one.
+                    </p>
+                  ) : (
+                    mapContent.stakeholders.map((s, i) => (
+                      <div key={i} className="bg-brand-bg rounded-lg p-3 border border-brand-border">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 grid grid-cols-3 gap-2 min-w-0">
+                            <input
+                              value={s.name}
+                              onChange={(e) => updateStakeholder(i, 'name', e.target.value)}
+                              placeholder="Full name"
+                              className="bg-transparent text-sm text-brand-white focus:outline-none placeholder:text-brand-slate"
+                            />
+                            <input
+                              value={s.role}
+                              onChange={(e) => updateStakeholder(i, 'role', e.target.value)}
+                              placeholder="Title / Role"
+                              className="bg-transparent text-sm text-brand-muted focus:outline-none placeholder:text-brand-slate"
+                            />
+                            <input
+                              value={s.company}
+                              onChange={(e) => updateStakeholder(i, 'company', e.target.value)}
+                              placeholder="Company"
+                              className="bg-transparent text-sm text-brand-muted focus:outline-none placeholder:text-brand-slate"
+                            />
+                          </div>
+                          <button
+                            onClick={() => removeStakeholder(i)}
+                            className="text-brand-slate hover:text-red-400 cursor-pointer p-1.5 rounded transition-colors shrink-0"
+                            aria-label="Remove stakeholder"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </section>
 

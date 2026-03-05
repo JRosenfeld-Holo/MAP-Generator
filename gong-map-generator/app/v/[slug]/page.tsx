@@ -27,6 +27,24 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
+function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+}
+
+const AVATAR_COLORS = [
+  'bg-brand-lime/20 text-brand-lime border-brand-lime/20',
+  'bg-blue-500/15 text-blue-300 border-blue-500/20',
+  'bg-violet-500/15 text-violet-300 border-violet-500/20',
+  'bg-emerald-500/15 text-emerald-300 border-emerald-500/20',
+  'bg-amber-500/15 text-amber-300 border-amber-500/20',
+  'bg-rose-500/15 text-rose-300 border-rose-500/20',
+];
+
 export default async function PublicMAPView({ params }: Props) {
   const { slug } = await params;
   const map = await getMAPBySlug(slug);
@@ -35,143 +53,296 @@ export default async function PublicMAPView({ params }: Props) {
 
   const content = map.content as MAPContent;
 
+  const milestoneDates = [...content.milestones]
+    .filter((m) => m.targetDate)
+    .sort((a, b) => new Date(a.targetDate).getTime() - new Date(b.targetDate).getTime());
+
+  const firstDate = milestoneDates[0]?.targetDate;
+  const lastDate = milestoneDates[milestoneDates.length - 1]?.targetDate;
+
+  const fmtShort = (d: string) => {
+    const dt = new Date(d + 'T00:00:00');
+    return `${dt.toLocaleDateString('en-US', { month: 'short' })} '${String(dt.getFullYear()).slice(2)}`;
+  };
+
+  const fmtLong = (d: string) =>
+    new Date(d + 'T00:00:00').toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    });
+
+  const hasRisks = content.riskFactors.length > 0;
+  let sectionNum = 1;
+
   return (
-    <div className="min-h-screen bg-brand-bg text-brand-text relative overflow-hidden">
-      {/* Ambient background glow */}
+    <div className="min-h-screen bg-brand-bg text-brand-text relative overflow-x-hidden">
+      {/* Dot grid texture */}
+      <div
+        className="fixed inset-0 pointer-events-none"
+        style={{
+          backgroundImage: 'radial-gradient(rgba(193,246,23,0.06) 1px, transparent 1px)',
+          backgroundSize: '28px 28px',
+        }}
+        aria-hidden="true"
+      />
+
+      {/* Ambient glow */}
       <div className="fixed inset-0 pointer-events-none" aria-hidden="true">
-        <div className="absolute -top-[40%] -right-[20%] w-[60%] h-[60%] rounded-full bg-brand-lime/[0.03] blur-[120px]" />
-        <div className="absolute -bottom-[30%] -left-[15%] w-[50%] h-[50%] rounded-full bg-brand-lime/[0.02] blur-[100px]" />
+        <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[90%] h-[55vh] rounded-full bg-brand-lime/[0.035] blur-[160px]" />
+        <div className="absolute bottom-0 right-[-10%] w-[50%] h-[40vh] rounded-full bg-brand-lime/[0.02] blur-[120px]" />
       </div>
 
-      {/* Nav */}
-      <nav className="border-b border-white/[0.06] bg-brand-bg/80 backdrop-blur-xl sticky top-0 z-20 animate-fade-in">
-        <div className="max-w-4xl mx-auto px-6 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <Image src="/logo-wordmark.png" alt="Hologram" width={120} height={20} className="h-5 w-auto" />
+      {/* ── STICKY NAV ─────────────────────────────────────────────────────── */}
+      <nav className="sticky top-0 z-20 border-b border-white/[0.05] bg-brand-bg/90 backdrop-blur-xl animate-fade-in">
+        <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <Image
+              src="/logo-wordmark.png"
+              alt="Hologram"
+              width={110}
+              height={18}
+              className="h-[18px] w-auto shrink-0"
+            />
+            <span className="text-brand-border/60 hidden sm:block">|</span>
+            <span className="text-[10px] font-mono text-brand-muted uppercase tracking-[0.18em] hidden sm:block truncate">
+              Mutual Action Plan
+            </span>
           </div>
           <a
             href="https://www.hologram.io/contact-sales/"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs bg-brand-lime text-brand-bg font-semibold px-4 py-1.5 rounded-lg hover:bg-brand-lime-dim transition-all hover:shadow-[0_0_20px_rgba(193,246,23,0.3)] cursor-pointer"
+            className="shrink-0 text-[11px] bg-brand-lime text-brand-bg font-bold px-4 py-2 rounded-lg hover:bg-brand-lime-dim transition-all hover:shadow-[0_0_24px_rgba(193,246,23,0.35)] cursor-pointer"
           >
-            Schedule a Meeting
+            Book a Meeting
           </a>
         </div>
       </nav>
 
-      <div className="relative z-10 p-6 md:p-12 lg:py-16">
-        {/* Hero Header */}
-        <header className="max-w-4xl mx-auto mb-14 animate-fade-up">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-            <div>
-              <div className="flex items-center gap-3 mb-4">
-                <span className="w-2 h-2 rounded-full bg-brand-lime animate-glow-pulse" />
-                <span className="text-brand-lime font-semibold tracking-[0.2em] uppercase text-[10px]">
-                  Mutual Action Plan
-                </span>
-                <span className="h-px flex-1 bg-gradient-to-r from-brand-lime/20 to-transparent max-w-24" />
-              </div>
-              <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-brand-white leading-[1.1]">
-                {content.customerName}
-                <span className="text-brand-lime mx-3 text-3xl md:text-4xl font-light">+</span>
-                <span className="text-brand-white/80">Hologram</span>
-              </h1>
+      <div className="relative z-10">
+        {/* ── HERO ─────────────────────────────────────────────────────────── */}
+        <header className="max-w-5xl mx-auto px-6 pt-14 pb-12 animate-fade-up">
+          {/* MAP label */}
+          <div className="flex items-center justify-center gap-3 mb-12">
+            <span className="h-px w-20 bg-gradient-to-r from-transparent to-brand-lime/25" />
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-brand-lime animate-glow-pulse" />
+              <span className="font-mono text-[9px] text-brand-lime uppercase tracking-[0.35em]">
+                Mutual Action Plan
+              </span>
             </div>
-            <div className="px-4 py-2 glass-card rounded-lg text-brand-lime text-xs font-semibold tracking-wide uppercase shrink-0">
-              {content.dealStage || 'Active Discovery'}
-            </div>
+            <span className="h-px w-20 bg-gradient-to-l from-transparent to-brand-lime/25" />
           </div>
-          <div className="h-px bg-gradient-to-r from-brand-lime/30 via-brand-border to-transparent mt-8" />
+
+          {/* Partnership headline */}
+          <div className="text-center mb-10">
+            <h1 className="text-[clamp(2.5rem,8vw,5.5rem)] font-extrabold tracking-tight leading-[1.0] text-brand-white">
+              {content.customerName}
+            </h1>
+            <div className="flex items-center justify-center gap-5 my-4">
+              <span className="h-px flex-1 max-w-28 bg-gradient-to-r from-transparent to-brand-border" />
+              <span className="text-[clamp(1.5rem,4vw,2.5rem)] text-brand-lime/50 font-extralight">+</span>
+              <span className="h-px flex-1 max-w-28 bg-gradient-to-l from-transparent to-brand-border" />
+            </div>
+            <h2 className="text-[clamp(2.5rem,8vw,5.5rem)] font-extrabold tracking-tight leading-[1.0] text-white/25">
+              Hologram
+            </h2>
+          </div>
+
+          {/* Metadata chips */}
+          <div className="flex flex-wrap items-center justify-center gap-3 mt-8">
+            {content.dealStage && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-lime/10 border border-brand-lime/20 text-brand-lime text-[10px] font-mono font-bold uppercase tracking-[0.15em]">
+                <span className="w-1.5 h-1.5 rounded-full bg-brand-lime animate-glow-pulse" />
+                {content.dealStage}
+              </span>
+            )}
+            {content.aeName && (
+              <span className="px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.06] text-[10px] font-mono text-brand-muted uppercase tracking-[0.12em]">
+                AE:{' '}
+                <span className="text-brand-text/80">{content.aeName}</span>
+              </span>
+            )}
+            {content.generatedAt && (
+              <span className="px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.06] text-[10px] font-mono text-brand-muted uppercase tracking-[0.12em]">
+                {fmtLong(content.generatedAt)}
+              </span>
+            )}
+          </div>
+
+          {/* Milestone timeline strip */}
+          {milestoneDates.length >= 2 && (
+            <div className="mt-12 px-2 sm:px-8">
+              <div className="flex items-center gap-0">
+                <span className="text-[9px] font-mono text-brand-slate uppercase tracking-wider shrink-0 mr-3">
+                  {fmtShort(firstDate!)}
+                </span>
+                <div className="relative flex-1 flex items-center">
+                  {/* Track line */}
+                  <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-px bg-brand-border" />
+                  {/* Milestone dots */}
+                  {milestoneDates.map((m, i) => {
+                    const pct =
+                      i === 0
+                        ? 0
+                        : i === milestoneDates.length - 1
+                          ? 100
+                          : (i / (milestoneDates.length - 1)) * 100;
+                    const isComplete = m.status === 'complete';
+                    const isInProgress = m.status === 'in_progress';
+                    return (
+                      <div
+                        key={i}
+                        className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 group cursor-default"
+                        style={{ left: `${pct}%` }}
+                      >
+                        <div
+                          className={`w-2.5 h-2.5 rounded-full border-2 transition-all duration-300 ${
+                            isComplete
+                              ? 'bg-brand-lime border-brand-lime shadow-[0_0_8px_rgba(193,246,23,0.7)]'
+                              : isInProgress
+                                ? 'bg-amber-400/40 border-amber-400/70'
+                                : i === 0 || i === milestoneDates.length - 1
+                                  ? 'bg-brand-bg border-brand-lime/30'
+                                  : 'bg-brand-bg border-brand-border'
+                          }`}
+                        />
+                        {/* Tooltip */}
+                        <div className="absolute bottom-full mb-2.5 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
+                          <div className="bg-brand-card border border-brand-border rounded-lg px-3 py-1.5 shadow-xl whitespace-nowrap">
+                            <p className="text-[10px] font-semibold text-brand-white">{m.title}</p>
+                            {m.targetDate && (
+                              <p className="text-[9px] font-mono text-brand-muted mt-0.5">
+                                {fmtShort(m.targetDate)}
+                              </p>
+                            )}
+                          </div>
+                          <div className="w-1.5 h-1.5 bg-brand-card border-r border-b border-brand-border rotate-45 mx-auto -mt-0.5" />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <span className="text-[9px] font-mono text-brand-slate uppercase tracking-wider shrink-0 ml-3">
+                  {fmtShort(lastDate!)}
+                </span>
+              </div>
+              <p className="text-center text-[9px] font-mono text-brand-slate/60 uppercase tracking-[0.2em] mt-3">
+                {milestoneDates.length}-milestone engagement
+              </p>
+            </div>
+          )}
+
+          {/* Divider */}
+          <div className="mt-12 h-px bg-gradient-to-r from-transparent via-brand-lime/15 to-transparent" />
         </header>
 
-        <main className="max-w-4xl mx-auto space-y-8">
-          {/* North Star */}
-          <section className="animate-fade-up stagger-1 glass-card gradient-border rounded-2xl p-8 md:p-10">
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-8 h-8 rounded-lg bg-brand-lime/10 flex items-center justify-center shrink-0">
-                <svg className="w-4 h-4 text-brand-lime" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+        <main className="max-w-5xl mx-auto px-6 pb-24 space-y-5">
+          {/* ── NORTH STAR ──────────────────────────────────────────────────── */}
+          <section className="animate-fade-up stagger-1">
+            <SectionLabel num={sectionNum++} label="Shared Vision" />
+            <div className="relative rounded-2xl overflow-hidden mt-4">
+              {/* Left lime border */}
+              <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-brand-lime via-brand-lime/60 to-transparent rounded-l-2xl" />
+              <div className="glass-card rounded-2xl pl-10 pr-8 py-10 md:py-12">
+                <svg
+                  className="w-8 h-8 text-brand-lime/20 mb-4"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" />
                 </svg>
-              </div>
-              <div>
-                <h2 className="text-xs font-bold text-brand-lime uppercase tracking-[0.15em]">North Star Objective</h2>
+                <p className="text-xl md:text-2xl font-light italic text-brand-white/90 leading-relaxed">
+                  {content.northStar}
+                </p>
+                <div className="flex items-center gap-2.5 mt-6">
+                  <span className="w-6 h-px bg-brand-lime/40" />
+                  <span className="text-[9px] font-mono text-brand-lime/50 uppercase tracking-[0.25em]">
+                    North Star Objective
+                  </span>
+                </div>
               </div>
             </div>
-            <p className="text-brand-text/90 leading-relaxed text-lg font-light">{content.northStar}</p>
           </section>
 
-          {/* Interactive Progress Bar + Milestones */}
-          <InteractiveMilestones
-            milestones={content.milestones}
-            slug={slug}
-            customerName={content.customerName}
-          />
+          {/* ── MILESTONES ──────────────────────────────────────────────────── */}
+          <section className="animate-fade-up stagger-2">
+            <SectionLabel num={sectionNum++} label="Strategic Milestones" />
+            <div className="mt-4">
+              <InteractiveMilestones
+                milestones={content.milestones}
+                slug={slug}
+                customerName={content.customerName}
+              />
+            </div>
+          </section>
 
-          {/* Success Factors & Stakeholders */}
-          <div className="grid md:grid-cols-2 gap-5 animate-fade-up stagger-4">
-            <section className="glass-card gradient-border rounded-2xl p-7">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="w-7 h-7 rounded-lg bg-brand-lime/10 flex items-center justify-center shrink-0">
-                  <svg className="w-3.5 h-3.5 text-brand-lime" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <h3 className="text-[11px] font-bold text-brand-lime uppercase tracking-[0.15em]">
+          {/* ── SUCCESS FACTORS & STAKEHOLDERS ─────────────────────────────── */}
+          <div className="animate-fade-up stagger-4">
+            <SectionLabel num={sectionNum++} label="Success & Team" />
+            <div className="grid md:grid-cols-2 gap-4 mt-4">
+              {/* Success factors */}
+              <section className="glass-card gradient-border rounded-2xl p-7">
+                <h3 className="text-[9px] font-mono font-bold text-brand-lime uppercase tracking-[0.25em] mb-6">
                   Success Factors
                 </h3>
-              </div>
-              <ul className="space-y-3">
-                {content.successFactors.map((f: string, i: number) => (
-                  <li key={i} className="flex items-start gap-3 group">
-                    <span className="w-1 h-1 rounded-full bg-brand-lime/60 mt-2 shrink-0 group-hover:bg-brand-lime transition-colors" />
-                    <span className="text-sm text-brand-text/70 leading-relaxed">{f}</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
+                <ol className="space-y-5">
+                  {content.successFactors.map((f: string, i: number) => (
+                    <li key={i} className="flex items-start gap-4">
+                      <span className="text-[10px] font-mono font-bold text-brand-lime/35 tabular-nums shrink-0 pt-0.5 w-5">
+                        {String(i + 1).padStart(2, '0')}
+                      </span>
+                      <span className="text-sm text-brand-text/75 leading-relaxed">{f}</span>
+                    </li>
+                  ))}
+                </ol>
+              </section>
 
-            <section className="glass-card gradient-border rounded-2xl p-7">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="w-7 h-7 rounded-lg bg-brand-white/5 flex items-center justify-center shrink-0">
-                  <svg className="w-3.5 h-3.5 text-brand-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
+              {/* Stakeholders */}
+              <section className="glass-card gradient-border rounded-2xl p-7">
+                <h3 className="text-[9px] font-mono font-bold text-brand-muted uppercase tracking-[0.25em] mb-6">
+                  Key Stakeholders
+                </h3>
+                <div className="space-y-3.5">
+                  {content.stakeholders.map(
+                    (s: { name: string; role: string; company: string }, i: number) => (
+                      <div key={i} className="flex items-center gap-3 group">
+                        <div
+                          className={`w-9 h-9 rounded-xl flex items-center justify-center text-[11px] font-bold shrink-0 border ${AVATAR_COLORS[i % AVATAR_COLORS.length]}`}
+                        >
+                          {getInitials(s.name)}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-brand-text leading-tight truncate">
+                            {s.name}
+                          </p>
+                          {(s.role || s.company) && (
+                            <p className="text-[10px] font-mono text-brand-muted truncate mt-0.5">
+                              {s.role}
+                              {s.role && s.company && ' · '}
+                              {s.company}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  )}
                 </div>
-                <h3 className="text-[11px] font-bold text-brand-muted uppercase tracking-[0.15em]">Key Stakeholders</h3>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {content.stakeholders.map(
-                  (s: { name: string; role: string; company: string }, i: number) => (
-                    <span
-                      key={i}
-                      className="bg-white/[0.04] border border-white/[0.06] text-[11px] px-3 py-1.5 rounded-lg text-brand-text/80 hover:border-brand-lime/20 hover:bg-brand-lime/[0.04] transition-all cursor-default"
-                    >
-                      {s.name}
-                      {s.role && <span className="text-brand-muted ml-1.5">/ {s.role}</span>}
-                    </span>
-                  )
-                )}
-              </div>
-            </section>
+              </section>
+            </div>
           </div>
 
-          {/* Risk Factors */}
-          {content.riskFactors.length > 0 && (
-            <section className="animate-fade-up stagger-5 glass-card gradient-border rounded-2xl p-7">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="w-7 h-7 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0">
-                  <svg className="w-3.5 h-3.5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                  </svg>
-                </div>
-                <h3 className="text-[11px] font-bold text-amber-400 uppercase tracking-[0.15em]">Risk Factors</h3>
-              </div>
-              <div className="space-y-4">
+          {/* ── RISK FACTORS ────────────────────────────────────────────────── */}
+          {hasRisks && (
+            <section className="animate-fade-up stagger-5">
+              <SectionLabel num={sectionNum++} label="Risk & Mitigation" />
+              <div className="glass-card gradient-border rounded-2xl p-7 mt-4 space-y-5">
                 {content.riskFactors.map((r: MAPRiskFactor, i: number) => (
-                  <div key={i} className="flex items-start gap-3 group">
+                  <div key={i} className="flex items-start gap-4">
                     <span
-                      className={`text-[9px] px-2.5 py-1 rounded-md font-bold mt-0.5 uppercase tracking-wider ${
+                      className={`shrink-0 mt-px text-[9px] px-2.5 py-1 rounded-md font-mono font-bold uppercase tracking-wider whitespace-nowrap ${
                         r.severity === 'high'
                           ? 'bg-red-500/10 text-red-400 border border-red-500/20'
                           : r.severity === 'medium'
@@ -181,11 +352,12 @@ export default async function PublicMAPView({ params }: Props) {
                     >
                       {r.severity}
                     </span>
-                    <div className="flex-1">
+                    <div>
                       <p className="text-sm text-brand-text/80 leading-relaxed">{r.description}</p>
                       {r.mitigation && (
                         <p className="text-xs text-brand-muted mt-1.5 flex items-center gap-1.5">
-                          <span className="text-emerald-400/70">&#8594;</span> {r.mitigation}
+                          <span className="text-emerald-400/60 text-base leading-none">→</span>
+                          {r.mitigation}
                         </p>
                       )}
                     </div>
@@ -195,42 +367,78 @@ export default async function PublicMAPView({ params }: Props) {
             </section>
           )}
 
-          {/* Schedule Meeting CTA */}
-          <section className="animate-fade-up stagger-6 relative rounded-2xl overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-brand-lime/[0.08] via-brand-lime/[0.04] to-transparent" />
-            <div className="relative glass-card border border-brand-lime/10 rounded-2xl p-8 md:p-10 flex flex-col sm:flex-row items-center gap-6">
-              <div className="flex-1 text-center sm:text-left">
-                <h3 className="text-lg font-semibold text-brand-white mb-2">Ready to move forward?</h3>
-                <p className="text-sm text-brand-muted leading-relaxed">
-                  Schedule a meeting with the Hologram team to review this action plan and align on next steps.
-                </p>
+          {/* ── CTA ─────────────────────────────────────────────────────────── */}
+          <section className="animate-fade-up stagger-6 pt-4">
+            <div className="relative rounded-2xl overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-brand-lime/[0.09] via-brand-lime/[0.04] to-transparent" />
+              <div className="absolute inset-0 border border-brand-lime/15 rounded-2xl" />
+              <div className="relative p-8 md:p-12 flex flex-col sm:flex-row items-center gap-8">
+                <div className="flex-1 text-center sm:text-left">
+                  <p className="text-[9px] font-mono text-brand-lime uppercase tracking-[0.3em] mb-2">
+                    Next Step
+                  </p>
+                  <h3 className="text-2xl md:text-3xl font-bold text-brand-white mb-3 leading-tight">
+                    Ready to move forward?
+                  </h3>
+                  <p className="text-sm text-brand-muted leading-relaxed max-w-sm">
+                    Schedule time with the Hologram team to review this plan, align on priorities,
+                    and accelerate your path to go-live.
+                  </p>
+                </div>
+                <a
+                  href="https://www.hologram.io/contact-sales/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group shrink-0 bg-brand-lime text-brand-bg font-bold px-8 py-4 rounded-xl text-sm hover:bg-brand-lime-dim transition-all hover:shadow-[0_0_40px_rgba(193,246,23,0.3)] active:scale-[0.98] flex items-center gap-2.5 cursor-pointer"
+                >
+                  Book a Meeting
+                  <svg
+                    className="w-4 h-4 group-hover:translate-x-0.5 transition-transform duration-150"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2.5}
+                    aria-hidden="true"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  </svg>
+                </a>
               </div>
-              <a
-                href="https://www.hologram.io/contact-sales/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="bg-brand-lime text-brand-bg font-bold px-8 py-3.5 rounded-xl text-sm hover:bg-brand-lime-dim transition-all hover:shadow-[0_0_30px_rgba(193,246,23,0.25)] active:scale-[0.98] shrink-0 flex items-center gap-2.5 cursor-pointer"
-              >
-                Schedule Meeting
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                </svg>
-              </a>
             </div>
           </section>
         </main>
 
-        {/* Footer */}
-        <footer className="max-w-4xl mx-auto mt-20 pt-8 border-t border-white/[0.04] text-center pb-8 animate-fade-in stagger-7">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <Image src="/logo-mark.png" alt="Hologram" width={16} height={16} className="h-4 w-auto opacity-50" />
-            <span className="text-brand-muted/60 font-medium text-xs">Hologram</span>
+        {/* ── FOOTER ───────────────────────────────────────────────────────── */}
+        <footer className="max-w-5xl mx-auto px-6 pb-12 mt-2 pt-8 border-t border-white/[0.04] text-center animate-fade-in">
+          <div className="flex items-center justify-center gap-2 mb-1.5">
+            <Image
+              src="/logo-mark.png"
+              alt="Hologram"
+              width={14}
+              height={14}
+              className="h-3.5 w-auto opacity-30"
+            />
+            <span className="text-brand-slate/60 font-semibold text-[11px] tracking-wide">Hologram</span>
           </div>
-          <p className="text-brand-slate text-[10px] tracking-wide">
-            Powered by Hologram IoT
+          <p className="text-brand-slate/40 text-[9px] font-mono tracking-[0.2em] uppercase">
+            IoT Connectivity for the Modern Era
           </p>
         </footer>
       </div>
+    </div>
+  );
+}
+
+function SectionLabel({ num, label }: { num: number; label: string }) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="text-[10px] font-mono text-brand-slate/60 tabular-nums w-5 shrink-0">
+        {String(num).padStart(2, '0')}
+      </span>
+      <span className="h-px flex-1 bg-brand-border/60" />
+      <span className="text-[9px] font-mono text-brand-slate/60 uppercase tracking-[0.25em] shrink-0">
+        {label}
+      </span>
     </div>
   );
 }
